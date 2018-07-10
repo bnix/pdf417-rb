@@ -2,6 +2,8 @@
 PDF417-rb implements a PDF417 encoder based on *freely* available PDF417
 specification documentation, and therefore may not be fully compliant with ISO 15438.
 
+<img src="https://raw.githubusercontent.com/bnix/pdf417-rb/master/example_barcode.svg?sanitize=true" width="620px" height="45px"/>
+
 ## PDF417 Encoding overview
 ### Definitions
 - __Codeword__ - A codeword is the encoding unit used to represent the contents of
