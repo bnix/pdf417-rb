@@ -2,61 +2,44 @@ module PDF417
   class HighLevelEncoder
     PAD_CODEWORD = 900
 
-    attr_reader :message, :security, :columns
-
-    def initialize(message, security, columns)
-      @message = message
-      @security = security
-      @columns = columns
+    def initialize(barcode_config)
+      @config = barcode_config
     end
 
-    def each_row
-      codewords = pack_codewords
-      total_rows = codewords.length / columns
-
-      codewords.each_slice(columns).with_index do |row, row_index|
-        cluster = row_index % 3
-        left, right = row_indicators(cluster, total_rows)
-                      .map { |x| 30 * (row_index / 3) + x }
-
-        yield row.unshift(left).push(right), cluster
-      end
+    def encode
+      compact_message(config.message)
+      .yield_self(&method(:padding))
+      .yield_self(&method(:length_descriptor))
+      .yield_self(&method(:error_correction))
+      .yield_self { |codewords| BarcodeMatrix.new(codewords, config) }
     end
 
     private
 
-    def pack_codewords
-      message_codewords = MessageCompactor.new(message).compact
-      padding_codewords = padding(message_codewords.length)
-      data_codewords = message_codewords + padding_codewords
-      length_descriptor = 1 + data_codewords.length
-      data_codewords.unshift(length_descriptor)
-      # error correction
-      correction_codewords = []
+    attr_reader :config
 
-      data_codewords.concat(correction_codewords)
+    def compact_message(message)
+      MessageCompactor.compact(message)
     end
 
-    def padding(message_codewords_count)
-      correction_codewords_count =  2 ** (security + 1)
-      sum_codewords = 1 + message_codewords_count + correction_codewords_count
-      pad_count = sum_codewords % columns
-      Array.new(pad_count, PAD_CODEWORD)
+    def padding(codewords)
+      correction_codeword_length = 2 ** (config.security_level + 1)
+      sum_codewords = 1 + codewords.length + correction_codeword_length
+      rows = (sum_codewords / config.columns.to_f).ceil
+      pad_count = rows * config.columns - sum_codewords
+      codewords.concat(Array.new(pad_count, PAD_CODEWORD))
     end
 
-    # To aid the decoding process, particularly when a barcode symbol is
-    # scanned obliquely, each row has left and right row indicator codewords to
-    # identify the row number.
-    def row_indicators(cluster, row_count)
-      f1 = (row_count - 1) / 3
-      f2 = columns - 1
-      f3 = security * 3 + ((row_count - 1) % 3)
+    def length_descriptor(codewords)
+      codewords.unshift(1 + codewords.length)
+    end
 
-      case cluster
-      when 0; [f1, f2]
-      when 1; [f3, f1]
-      when 2; [f2, f3]
-      end
+    def error_correction(codewords)
+      codewords.concat(
+        ErrorCorrection.correction_codewords(
+          codewords, config.security_level
+        )
+      )
     end
   end
 end
