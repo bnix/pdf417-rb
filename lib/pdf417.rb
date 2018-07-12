@@ -4,6 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'pdf417/codeword_cluster'
 require 'pdf417/text_compactor'
 require 'pdf417/message_compactor'
+require 'pdf417/error_correction'
 require 'pdf417/high_level_encoder'
 require 'pdf417/low_level_encoder'
 require 'pdf417/barcode_painter'
