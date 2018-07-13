@@ -3,6 +3,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 require 'pdf417/barcode_config'
 require 'pdf417/text_compactor'
+require 'pdf417/number_compactor'
 require 'pdf417/message_compactor'
 require 'pdf417/error_correction'
 require 'pdf417/barcode_matrix'
