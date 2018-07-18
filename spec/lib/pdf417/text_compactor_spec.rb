@@ -1,67 +1,79 @@
 RSpec.describe PDF417::TextCompactor do
-  describe '#compact_text' do
-    subject(:compactor) { described_class.new }
+  def compactor(msg)
+    described_class.new(msg)
+  end
 
+  describe '#compact' do
+    it 'turns codepoints into codwords' do
+      expect(compactor('AB').compact(0,2)).to eq([1])
+    end
+
+    it 'pads incomplete codewords' do
+      expect(compactor('ABC').compact(0,3)).to eq([1, 89])
+    end
+  end
+
+  describe '#compact_text' do
     it 'uses uppercase as the implicit submode' do
-      expect(compactor.compact_text('J')).to eq([9])
+      expect(compactor('J').compact_text).to eq([9])
     end
 
     context 'changing submode' do
       it 'uses jump commands to change submode' do
-        expect(compactor.compact_text('@Tq5')).to eq([28, 25, 3, 29, 19, 27, 16, 28, 5])
+        expect(compactor('@Tq5').compact_text).to eq([28, 25, 3, 29, 19, 27, 16, 28, 5])
       end
 
       context 'from uppercase' do
         it 'jumps to lower' do
-          expect(compactor.compact_text('Zy')).to eq([25, 27, 24])
+          expect(compactor('Zy').compact_text).to eq([25, 27, 24])
         end
 
         it 'jumps to mixed' do
-          expect(compactor.compact_text('G&')).to eq([6, 28, 10])
+          expect(compactor('G&').compact_text).to eq([6, 28, 10])
         end
 
         it 'jumps to punctuation' do
-          expect(compactor.compact_text('N?')).to eq([13, 28, 25, 25])
+          expect(compactor('N?').compact_text).to eq([13, 28, 25, 25])
         end
 
         it 'does not code a jump command when the submode is the same' do
-          expect(compactor.compact_text('XYZ')).to eq([23, 24, 25])
+          expect(compactor('XYZ').compact_text).to eq([23, 24, 25])
         end
       end
 
       context 'from lowercase' do
         it 'jumps to uppercases' do
-          expect(compactor.compact_text('yZ')).to eq([27, 24, 28, 28, 25])
+          expect(compactor('yZ').compact_text).to eq([27, 24, 28, 28, 25])
         end
 
         it 'jumps to mixed' do
-          expect(compactor.compact_text('f0')).to eq([27, 5, 28, 0])
+          expect(compactor('f0').compact_text).to eq([27, 5, 28, 0])
         end
 
         it 'jumps to punctuation' do
-          expect(compactor.compact_text('m{')).to eq([27, 12, 28, 25, 26])
+          expect(compactor('m{').compact_text).to eq([27, 12, 28, 25, 26])
         end
 
         it 'does not code a jump command when the submode is the same' do
-          expect(compactor.compact_text('ijk')).to eq([27, 8, 9, 10])
+          expect(compactor('ijk').compact_text).to eq([27, 8, 9, 10])
         end
       end
 
       context 'from mixed' do
         it 'jumps to uppercases' do
-          expect(compactor.compact_text('5A')).to eq([28, 5, 28, 0])
+          expect(compactor('5A').compact_text).to eq([28, 5, 28, 0])
         end
 
         it 'jumps to lowercase' do
-          expect(compactor.compact_text('=u')).to eq([28, 23, 27, 20])
+          expect(compactor('=u').compact_text).to eq([28, 23, 27, 20])
         end
 
         it 'jumps to punctuation' do
-          expect(compactor.compact_text('#>')).to eq([28, 15, 25, 2])
+          expect(compactor('#>').compact_text).to eq([28, 15, 25, 2])
         end
 
         it 'does not code a jump command when the submode is the same' do
-          expect(compactor.compact_text('987')).to eq([28, 9, 8, 7])
+          expect(compactor('987').compact_text).to eq([28, 9, 8, 7])
         end
       end
     end
@@ -69,7 +81,7 @@ RSpec.describe PDF417::TextCompactor do
     context 'when multiple submodes can code a character' do
       context 'and the current submode contains the character' do
         it 'does not change submodes' do
-          expect(compactor.compact_text('a ')).to eq([27, 0, 26])
+          expect(compactor("a\s").compact_text).to eq([27, 0, 26])
         end
       end
 
@@ -78,7 +90,7 @@ RSpec.describe PDF417::TextCompactor do
           mixed = PDF417::TextCompactor::SUBMODE_MIXED
           punct = PDF417::TextCompactor::SUBMODE_PUNCT
           search_order = PDF417::TextCompactor::CODEPOINTS.keys
-          expect(compactor.compact_text('$')).to eq([28, 18])
+          expect(compactor('$').compact_text).to eq([28, 18])
           expect(search_order.index(mixed)).to be < search_order.index(punct)
         end
       end

@@ -19,6 +19,10 @@ module PDF417
       end
     end
 
+    CODEPOINT_SUPERSET = CODEPOINTS.values.reduce(Set.new) do |set, codepoints|
+      set.merge(codepoints.keys)
+    end
+
     # Codepoint sequences for changing submode
     JUMP_COMMANDS = {
       SUBMODE_UPPER => {
@@ -43,14 +47,66 @@ module PDF417
       }
     }
 
-    def self.compact(message)
-      new.compact_text(message).each_slice(2).map do |left, right|
+    attr_reader :message
+
+    def initialize(message)
+      @message = message
+    end
+
+    def compact(start, length)
+      compact_text(start, length).each_slice(2).map do |left, right|
         (left * 30) + (right || PAD_CODEPOINT)
       end
     end
 
-    def codepoint(char, submode)
-      CODEPOINTS[submode][char]
+    # Encode each char as a submode codepoint, changing submode only
+    # when current char cannot be mapped to a codepoint in current submode.
+    def compact_text(start = 0, length = @message.length)
+      codepoints = []
+      current_submode = SUBMODE_UPPER
+
+      message[start, length].each_char do |char|
+        submode = next_submode(char, current_submode)
+
+        if current_submode != submode
+          codepoints.concat(jump_submode(current_submode, submode))
+          current_submode = submode
+        end
+
+        codepoints << codepoint(char, current_submode)
+      end
+
+      codepoints
+    end
+
+    def compactable_length(start)
+      pos = start
+      consecutive_text_count = 0
+      consecutive_number_count = 0
+
+      while pos < message.length
+        char = message[pos]
+        if char >= '0' && char <= '9'
+          consecutive_number_count += 1
+          consecutive_text_count += 1
+
+          if consecutive_number_count == 13
+            consecutive_text_count -= consecutive_number_count
+            break
+          end
+        elsif CODEPOINT_SUPERSET.include?(char)
+          consecutive_number_count = 0
+          consecutive_text_count += 1
+        else
+          break
+        end
+
+        pos += 1
+      end
+
+      # TODO byte compaction would be used for < 5 characters
+      # consecutive_text_count >= 5 ? consecutive_text_count : 0
+      consecutive_text_count
     end
 
     def next_submode(char, preferred_submode)
@@ -66,29 +122,12 @@ module PDF417
       end
     end
 
+    def codepoint(char, submode)
+      CODEPOINTS[submode][char]
+    end
 
     def jump_submode(from_submode, to_submode)
       JUMP_COMMANDS[from_submode][to_submode]
-    end
-
-    # Encode each char as a submode codepoint, changing submode only
-    # when current char cannot be mapped to a codepoint in current submode.
-    def compact_text(message)
-      codepoints = []
-      current_submode = SUBMODE_UPPER
-
-      message.each_char do |char|
-        submode = next_submode(char, current_submode)
-
-        if current_submode != submode
-          codepoints.concat(jump_submode(current_submode, submode))
-          current_submode = submode
-        end
-
-        codepoints << codepoint(char, current_submode)
-      end
-
-      codepoints
     end
   end
 end

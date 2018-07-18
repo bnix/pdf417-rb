@@ -19,7 +19,7 @@ module PDF417
     attr_reader :config
 
     def compact_message(message)
-      MessageCompactor.compact(message)
+      MessageCompactor.new(message).compact
     end
 
     def padding(codewords)

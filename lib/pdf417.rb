@@ -1,6 +1,8 @@
 lib = File.expand_path(__dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
+require 'set'
+
 require 'pdf417/barcode_config'
 require 'pdf417/text_compactor'
 require 'pdf417/number_compactor'
@@ -24,4 +26,6 @@ module PDF417
       f.write(painter.canvas)
     end
   end
+
+  class MessageNotCompactable < StandardError; end
 end
