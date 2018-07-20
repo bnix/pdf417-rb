@@ -1,5 +1,5 @@
 module PDF417
-  class MessageCompactor
+  class CompactionManager
     # TODO byte compaction
 
     JUMP_COMMANDS = {
